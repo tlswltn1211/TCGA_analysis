@@ -34,7 +34,7 @@ SURFACE = "#F8FAFC"
 
 
 def main(page: ft.Page) -> None:
-    page.title = "TCGA Explorer"
+    page.title = "TCGA Explorer_JS"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = SURFACE
     page.padding = 0
@@ -52,6 +52,8 @@ def main(page: ft.Page) -> None:
         "result": None,
         "export_table": None,
         "export_name": None,
+        "plot_bytes": None,
+        "plot_name": None,
     }
     selected_cohorts = {"BRCA", "COAD", "KIRC", "LIHC", "LUAD", "LUSC"}
 
@@ -79,6 +81,7 @@ def main(page: ft.Page) -> None:
     search_button = ft.Button("Tumor / Normal 발현 비교", icon=ft.Icons.COMPARE_ARROWS)
     survival_button = ft.OutlinedButton("선택 암종 생존 분석", icon=ft.Icons.QUERY_STATS)
     export_button = ft.OutlinedButton("결과 CSV 저장", icon=ft.Icons.DOWNLOAD, disabled=True)
+    save_plot_button = ft.OutlinedButton("그래프 PNG 저장", icon=ft.Icons.IMAGE_OUTLINED, disabled=True)
     plot_area = ft.Container(
         content=ft.Column(
             [ft.Icon(ft.Icons.INSERT_CHART_OUTLINED, size=64, color=ft.Colors.GREY_300), ft.Text("분석 결과가 여기에 표시됩니다.", color=ft.Colors.GREY_500)],
@@ -134,6 +137,7 @@ def main(page: ft.Page) -> None:
             state["result"] = None
             expression_name.value = "검색되지 않음"
             export_button.disabled = True
+            save_plot_button.disabled = True
             clinical_name.value = f"TIMER2.0 / GDAC {cohort} · {len(clinical):,}명"
             clinical_name.color = ft.Colors.GREY_900
             status.value = f"{cohort} 임상 데이터 {len(clinical):,}명 로드 완료"
@@ -160,6 +164,8 @@ def main(page: ft.Page) -> None:
             state["export_table"] = result.table
             state["export_name"] = f"{result.gene}_survival_result.csv"
             image = plot_survival(result)
+            state["plot_bytes"] = image
+            state["plot_name"] = f"{result.gene}_survival_plot.png"
             plot_area.content = ft.Image(src=image, fit=ft.BoxFit.CONTAIN, border_radius=10)
             metrics.controls = [
                 metric_card("분석 샘플", f"{result.sample_count:,}"),
@@ -168,6 +174,7 @@ def main(page: ft.Page) -> None:
                 metric_card("Log-rank p", f"{result.p_value:.3g}"),
             ]
             export_button.disabled = False
+            save_plot_button.disabled = False
             status.value = f"{result.gene} 분석 완료 · χ²={result.logrank_chi2:.3f}"
             page.update()
         except Exception as exc:
@@ -231,6 +238,22 @@ def main(page: ft.Page) -> None:
             Path(path).write_bytes(csv_bytes)
             snack(f"저장 완료: {path}")
 
+    async def save_plot(_=None) -> None:
+        image = state["plot_bytes"]
+        if not isinstance(image, bytes):
+            return
+        file_name = str(state["plot_name"] or "tcga_plot.png")
+        path = await picker.save_file(
+            dialog_title="분석 그래프 저장",
+            file_name=file_name,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["png"],
+            src_bytes=image,
+        )
+        if path:
+            Path(path).write_bytes(image)
+            snack(f"그래프 저장 완료: {path}")
+
     async def search_pan_cancer(_=None) -> None:
         gene = (gene_query.value or "").strip().upper()
         cohorts = [cohort for cohort in TIMER2_COHORTS if cohort in selected_cohorts]
@@ -248,6 +271,8 @@ def main(page: ft.Page) -> None:
             state["export_table"] = expression
             state["export_name"] = f"{canonical_gene}_pan_cancer_expression.csv"
             state["result"] = None
+            state["plot_bytes"] = image
+            state["plot_name"] = f"{canonical_gene}_pan_cancer_expression.png"
             plot_area.content = ft.Image(src=image, fit=ft.BoxFit.CONTAIN, border_radius=10)
             tumor_n = int(expression["sample_type"].eq("TP").sum())
             normal_n = int(expression["sample_type"].eq("NT").sum())
@@ -261,6 +286,7 @@ def main(page: ft.Page) -> None:
             expression_name.value = f"Firebrowse RSEM {canonical_gene} · 총 {len(expression):,}개 샘플"
             expression_name.color = ft.Colors.GREY_900
             export_button.disabled = False
+            save_plot_button.disabled = False
             status.value = f"{canonical_gene} pan-cancer 발현 비교 완료 · * Mann–Whitney p<0.05"
             snack(f"{canonical_gene}의 {len(cohorts)}개 암종 발현 비교를 완료했습니다.")
         except Exception as exc:
@@ -277,6 +303,7 @@ def main(page: ft.Page) -> None:
     gene_query.on_submit = search_pan_cancer
     survival_button.on_click = search_survival
     export_button.on_click = export_result
+    save_plot_button.on_click = save_plot
 
     cohort_summary = ft.Text(
         ", ".join(cohort for cohort in TIMER2_COHORTS if cohort in selected_cohorts),
@@ -365,7 +392,7 @@ def main(page: ft.Page) -> None:
 
     header = ft.Container(
         content=ft.Row([
-            ft.Column([ft.Text("TCGA Explorer", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE), ft.Text("유전자 발현 기반 생존 분석", color="#C7D2FE")], spacing=2),
+            ft.Column([ft.Text("TCGA Explorer_JS", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE), ft.Text("유전자 발현 기반 생존 분석", color="#C7D2FE")], spacing=2),
             ft.Container(expand=True),
             ft.TextButton("TIMER2.0 논문", icon=ft.Icons.OPEN_IN_NEW, style=ft.ButtonStyle(color=ft.Colors.WHITE), url="https://doi.org/10.1093/nar/gkaa407"),
         ]),
@@ -380,7 +407,7 @@ def main(page: ft.Page) -> None:
             ft.Divider(),
             ft.Text("2. 유전자 검색", size=18, weight=ft.FontWeight.BOLD),
             gene_search_card,
-            export_button,
+            ft.Row([export_button, save_plot_button], wrap=True),
             ft.Container(content=status, bgcolor="#EEF2FF", border_radius=10, padding=12),
         ], spacing=14, scroll=ft.ScrollMode.AUTO),
         width=360,

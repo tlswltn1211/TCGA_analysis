@@ -1,6 +1,10 @@
-# TCGA Explorer
+# TCGA Explorer_JS
 
 Flet으로 만든 로컬 데스크톱 TCGA 생존 분석 앱입니다. TIMER2.0이 사용한 공식 TCGA GDAC Firehose 임상 자료와 Firebrowse RSEM 발현값을 검색·결합하고, 선택한 유전자의 중앙값을 기준으로 발현군을 나눈 뒤 Kaplan–Meier 곡선과 log-rank 검정 결과를 제공합니다.
+
+## Windows 실행 파일
+
+Python이나 Git 없이 사용하려면 [GitHub Releases](https://github.com/tlswltn1211/TCGA_analysis/releases/latest)에서 `TCGA-Explorer_JS.exe`를 내려받아 더블클릭하세요. Windows SmartScreen이 표시되면 파일 출처를 확인한 후 **추가 정보 → 실행**을 선택할 수 있습니다.
 
 ## 실행
 
@@ -35,6 +39,8 @@ C:\Users\user\TCGA_analysis\.venv\Scripts\python.exe C:\Users\user\TCGA_analysis
 4. **Tumor / Normal 발현 비교**를 누릅니다.
 
 앱은 선택한 모든 암종의 primary tumor(`TP`)와 adjacent normal(`NT`) RSEM 발현값을 동시에 표시하고 Mann–Whitney 검정을 수행합니다. 개별 암종은 **선택 암종 생존 분석**으로 Kaplan–Meier 분석할 수 있습니다. TCGA 샘플 바코드는 환자 단위 12자리 바코드로 자동 정규화됩니다.
+
+분석 결과는 CSV로, 현재 그래프는 PNG 파일로 저장할 수 있습니다.
 
 데이터 출처: [TIMER2.0 논문](https://doi.org/10.1093/nar/gkaa407), [Broad GDAC Firehose](https://gdac.broadinstitute.org/)
 
