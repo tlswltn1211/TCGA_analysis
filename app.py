@@ -287,7 +287,10 @@ def main(page: ft.Page) -> None:
             expression_name.color = ft.Colors.GREY_900
             export_button.disabled = False
             save_plot_button.disabled = False
-            status.value = f"{canonical_gene} pan-cancer 발현 비교 완료 · * Mann–Whitney p<0.05"
+            status.value = (
+                f"{canonical_gene} pan-cancer 발현 비교 완료 · Mann–Whitney "
+                "* p<0.05, ** p<0.005, *** p<0.0005"
+            )
             snack(f"{canonical_gene}의 {len(cohorts)}개 암종 발현 비교를 완료했습니다.")
         except Exception as exc:
             snack(str(exc), error=True)

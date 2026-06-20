@@ -14,6 +14,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.transforms import ScaledTranslation
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2, mannwhitneyu
@@ -270,7 +271,7 @@ def plot_pan_cancer_expression(
             jitter = rng.normal(position, 0.045, len(sample))
             ax.scatter(jitter, sample, s=7, alpha=0.38, color=colors[sample_type], linewidths=0)
         if np.isfinite(p_value):
-            stars = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
+            stars = "***" if p_value < 0.0005 else "**" if p_value < 0.005 else "*" if p_value < 0.05 else "ns"
             star_labels.append((index, stars))
 
     star_y: float | None = None
@@ -279,7 +280,20 @@ def plot_pan_cancer_expression(
         star_offset = min(0.04, max(0.01, float(np.ptp(plot_values)) * 0.005))
         star_y = max(all_box_tops) + star_offset
         for index, stars in star_labels:
-            ax.text(index, star_y, stars, ha="center", va="bottom", fontsize=20, fontweight="bold")
+            font_size = 13 if stars == "ns" else 20
+            text_transform = ax.transData
+            if stars == "ns":
+                text_transform += ScaledTranslation(0, 3.5 / 72, fig.dpi_scale_trans)
+            ax.text(
+                index,
+                star_y,
+                stars,
+                transform=text_transform,
+                ha="center",
+                va="bottom",
+                fontsize=font_size,
+                fontweight="bold",
+            )
 
     from matplotlib.patches import Patch
 
