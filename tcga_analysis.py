@@ -229,11 +229,13 @@ def plot_pan_cancer_expression(
 ) -> tuple[bytes, pd.DataFrame]:
     """Draw selected-cohort tumor/normal boxes and return cohort statistics."""
     cohorts = list(dict.fromkeys(expression["cohort"].astype(str)))
-    figure_width = max(9.0, min(24.0, 1.15 * len(cohorts)))
+    figure_width = max(7.2, min(18.0, 0.82 * len(cohorts)))
     fig, ax = plt.subplots(figsize=(figure_width, 6.2), dpi=140)
     rng = np.random.default_rng(42)
-    colors = {"TP": "#EF5350", "NT": "#3B82F6"}
+    colors = {"TP": "#FF1744", "NT": "#2979FF"}
     stats: list[dict] = []
+    all_box_tops: list[float] = []
+    star_labels: list[tuple[int, str]] = []
 
     for index, cohort in enumerate(cohorts, start=1):
         cohort_rows = expression[expression["cohort"] == cohort]
@@ -259,27 +261,44 @@ def plot_pan_cancer_expression(
                 showfliers=False,
                 medianprops={"color": "white", "linewidth": 1.4},
             )
-            box["boxes"][0].set(facecolor=colors[sample_type], alpha=0.72)
+            box["boxes"][0].set(facecolor=colors[sample_type], alpha=0.98)
             for element in box["whiskers"] + box["caps"]:
                 element.set(color=colors[sample_type])
+            box_top = float(np.max(box["caps"][1].get_ydata()))
+            all_box_tops.append(box_top)
             sample = values if len(values) <= 180 else rng.choice(values, 180, replace=False)
             jitter = rng.normal(position, 0.045, len(sample))
-            ax.scatter(jitter, sample, s=7, alpha=0.24, color=colors[sample_type], linewidths=0)
+            ax.scatter(jitter, sample, s=7, alpha=0.38, color=colors[sample_type], linewidths=0)
         if np.isfinite(p_value):
             stars = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
-            top = max(np.max(tumor), np.max(normal))
-            ax.text(index, top + 0.18, stars, ha="center", va="bottom", fontsize=10, fontweight="bold")
+            star_labels.append((index, stars))
+
+    star_y: float | None = None
+    if star_labels:
+        plot_values = expression["expression"].to_numpy(float)
+        star_offset = min(0.04, max(0.01, float(np.ptp(plot_values)) * 0.005))
+        star_y = max(all_box_tops) + star_offset
+        for index, stars in star_labels:
+            ax.text(index, star_y, stars, ha="center", va="bottom", fontsize=20, fontweight="bold")
 
     from matplotlib.patches import Patch
 
     ax.set_title(f"{gene.upper()} expression across selected TCGA cancers", fontweight="bold")
-    ax.set_ylabel("RSEM expression (log2)")
-    ax.set_xticks(range(1, len(cohorts) + 1), cohorts, rotation=45, ha="right")
+    ax.set_ylabel("RSEM expression (log2)", fontsize=15)
+    ax.set_xticks(range(1, len(cohorts) + 1), cohorts, rotation=45, ha="right", fontsize=15)
+    ax.tick_params(axis="y", labelsize=15)
+    ax.set_xlim(0.55, len(cohorts) + 0.45)
     ax.grid(axis="y", alpha=0.18)
+    if star_y is not None:
+        y_bottom, y_top = ax.get_ylim()
+        text_padding = (y_top - y_bottom) * 0.12
+        ax.set_ylim(y_bottom, max(y_top, star_y + text_padding))
     ax.legend(
         handles=[Patch(facecolor=colors["TP"], label="Tumor"), Patch(facecolor=colors["NT"], label="Normal")],
         frameon=False,
-        loc="upper right",
+        loc="upper left",
+        bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0,
     )
     fig.tight_layout()
     output = BytesIO()
